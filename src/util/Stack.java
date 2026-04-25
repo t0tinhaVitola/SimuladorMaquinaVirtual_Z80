@@ -1,3 +1,4 @@
+package util;
 public class Stack {
     private final int maxSize;
     private int[] myStack;
