@@ -4,10 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
 
-
-
 public class Z80{
-    byte AC, R1, R2, R3, FLAG, R4, R5, R6;
+    byte A, B, C, D, E, H, L, F;
     int PC, SP, IX, IY;
     final int MEMSIZE = 65536;
     byte MEM[] = new byte[MEMSIZE];
@@ -17,14 +15,14 @@ public class Z80{
     public Z80(String fileAdress) throws Exception{
         //SP, IX, IY?
         PC   = 0;
-        AC   = 0;
-        R1   = 0;
-        R2   = 0;
-        R3   = 0;
-        R4   = 0;
-        R5   = 0;
-        R6   = 0;
-        FLAG = 0;
+        A    = 0;
+        B    = 0;
+        C    = 0;
+        D    = 0;
+        E    = 0;
+        H    = 0;
+        L    = 0;
+        F    = 0;
         
         fillMemoryWithInstructions(fileAdress);
     }
@@ -49,105 +47,100 @@ public class Z80{
         }
     }
 
-    private void executeLdAn(){
-        byte n = MEM[PC + 1];
-
-        this.AC = n;
-
-        PC += 2;
-
-        System.out.println("LD A, " + (n & 0xFF) + " executado. Novo AC: " + (AC & 0xFF));
+    byte getRegister(int code){
+        switch(code){
+            case 0b000: return B;
+            case 0b001: return C;
+            case 0b010: return D;
+            case 0b011: return E;
+            case 0b100: return H;
+            case 0b101: return L;
+            case 0b111: return A;
+            default: throw new RuntimeException("Invalid Register");
+        }
     }
 
-    private void executeLdBn(){
-        byte n = MEM[PC + 1];
-        this.R1 = n;
-        PC += 2;
-        System.out.println("LD B, " + (n & 0xFF) + " executado. Novo B: " + (R1 & 0xFF));
-    }
-
-    private void executeAddAB(){
-        int valA = this.AC & 0xFF;
-        int valB = this.R1 & 0xFF;
-
-        int resultado = valA + valB;
-
-        this.FLAG = 0;
-
-        if((resultado & 0xFF) == 0){
-            this.FLAG |= 0x40;
+    void setRegister(int code, byte value){
+        switch(code){
+            case 0b000: B = value; break;
+            case 0b001: C = value; break;
+            case 0b010: D = value; break;
+            case 0b011: E = value; break;
+            case 0b100: H = value; break;
+            case 0b101: L = value; break;
+            case 0b111: A = value; break;
+            default: throw new RuntimeException("Invalid Register");
         }
-
-        if(resultado > 255){
-            FLAG |= 0x01;
-        }
-
-        this.AC = (byte) resultado;
-
-        this.PC++;
-
-        System.out.println("ADD A, B realizado. AC agora é: " + (AC & 0xFF));
-    }
-
-    //Executa o SUB B = AC - B
-    private void executeSubB(){
-        int valA = this.AC & 0xFF;      //valA vai ser o AC
-        int valB = this.R1 & 0xFF;      //valB vai ser o reg R1
-
-        int resultado = valA - valB;
-
-        this.FLAG = 0;
-        this.FLAG |= 0x02;
-
-        if((resultado & 0xFF) == 0){
-            this.FLAG |= 0x40;
-        }
-
-        //flag de carry
-        if(valB > valA){
-            this.FLAG |= 0x01;
-        }
-
-        this.AC = (byte) (resultado & 0xFF);
-        this.PC++;
-
-        System.out.println("SUB B realizado. AC: " + (AC & 0xFF) + " Carry: " + (FLAG & 0x01));
     }
 
     public void run(){
-        while(true){
-            int opcode = MEM[PC] & 0xFF;
-
-            if(opcode == 0x76){
-                System.out.println("FIM (HALT).");
-                break;
+        while (true){
+            int opcode = Byte.toUnsignedInt(MEM[PC++]);
+            
+            //instrucoes fixas 
+            switch(opcode){
+                case 0x00: break; //NOP
+                case 0x76: 
+                    return; //HALT
             }
 
-            switch(opcode){
-                case 0x80:
-                    executeAddAB();
-                    break;
+            //instrucoes genericas
 
-                case 0x00:
-                    PC++;
-                    break;
+            //ADD A,r
+            if((opcode & 0b11111000) == 0b10000000){
+                int regCode = opcode & 0b111; 
+                int valA = A & 0xFF;
+                int valR = getRegister(regCode) & 0xFF;
+                int res = valA + valR;
 
-                case 0x3E:
-                    executeLdAn();
-                    break;
+                F = 0;
+                if((res & 0xFF) == 0) F |= 0x40;
+                if(res > 255) F |= 0x01;
 
-                case 0x06:
-                    executeLdBn();
-                    break;
+                A = (byte) res;
+            }
 
-                case 0x90:
-                    executeSubB();
-                    break;
+            //SUB B
+            if((opcode & 0b11111000) == 0b10010000){
+                int regCode = opcode & 0b111;
+                int valA = A & 0xFF;
+                int valR = getRegister(regCode) & 0xFF;
+                int res = valA - valR;
 
-                default:
-                    System.out.println("ERRO");
-                    return;
+                F = 0x02;
+                if((res & 0xFF) == 0) F |= 0x40;
+                if(valR > valA) F |= 0x01;
+
+                A = (byte) res;
+            }
+
+            //LD r, r'
+            if((opcode & 0b11000000) == 0b01000000){
+                int src = opcode & 0b111;
+                int dst = (opcode >> 3) & 0b111;
+
+                setRegister(dst, getRegister(src));
+            }
+
+            //LD r, n
+            if((opcode & 0b11000111) == 0b00000110){
+                int regCode = (opcode >> 3) & 0b111;
+                byte value = MEM[PC++];
+
+                setRegister(regCode, value);
             }
         }
+    }
+
+    public void display_registers(){
+        System.out.printf("\nA: %d", A);
+        System.out.printf("\nB: %d", B);
+        System.out.printf("\nC: %d", C);
+        System.out.printf("\nD: %d", D);
+        System.out.printf("\nE: %d", E);
+        System.out.printf("\nH: %d", H);
+        System.out.printf("\nL: %d", L);
+        System.out.printf("\nF: %d", F);
+        System.out.printf("\n\nPC: %d", PC);
     }
 }
