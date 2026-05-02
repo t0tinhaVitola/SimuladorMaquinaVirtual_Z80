@@ -21,6 +21,6 @@ public class Main {
 
 //Para executar o Z80, execute os seguintes comandos:
 //javac Main.java
-//java Main <n>   {n: qualquer valor}
+//java Main test.asm
 
-//OBS: voce configura o valor de N no 'test.asm'
+//OBS: voce configura o valor de N no 'test.asm' e tem que estar na pasta src
