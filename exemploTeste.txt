@@ -1,4 +1,0 @@
-LD A, 5
-LD B, 3 #comentario
-ADD A, B
-HALT

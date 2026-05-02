@@ -80,8 +80,7 @@ public class Z80{
             //instrucoes fixas 
             switch(opcode){
                 case 0x00: break; //NOP
-                case 0x76: 
-                    return; //HALT
+                case 0x76: return; //HALT
             }
 
             //instrucoes genericas

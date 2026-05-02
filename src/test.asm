@@ -1,3 +1,4 @@
 LD A, 12
+LD B, 3
 ADD A, B
 HALT
