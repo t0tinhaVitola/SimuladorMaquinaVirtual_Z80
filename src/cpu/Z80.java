@@ -48,4 +48,106 @@ public class Z80{
             }
         }
     }
+
+    private void executeLdAn(){
+        byte n = MEM[PC + 1];
+
+        this.AC = n;
+
+        PC += 2;
+
+        System.out.println("LD A, " + (n & 0xFF) + " executado. Novo AC: " + (AC & 0xFF));
+    }
+
+    private void executeLdBn(){
+        byte n = MEM[PC + 1];
+        this.R1 = n;
+        PC += 2;
+        System.out.println("LD B, " + (n & 0xFF) + " executado. Novo B: " + (R1 & 0xFF));
+    }
+
+    private void executeAddAB(){
+        int valA = this.AC & 0xFF;
+        int valB = this.R1 & 0xFF;
+
+        int resultado = valA + valB;
+
+        this.FLAG = 0;
+
+        if((resultado & 0xFF) == 0){
+            this.FLAG |= 0x40;
+        }
+
+        if(resultado > 255){
+            FLAG |= 0x01;
+        }
+
+        this.AC = (byte) resultado;
+
+        this.PC++;
+
+        System.out.println("ADD A, B realizado. AC agora é: " + (AC & 0xFF));
+    }
+
+    //Executa o SUB B = AC - B
+    private void executeSubB(){
+        int valA = this.AC & 0xFF;      //valA vai ser o AC
+        int valB = this.R1 & 0xFF;      //valB vai ser o reg R1
+
+        int resultado = valA - valB;
+
+        this.FLAG = 0;
+        this.FLAG |= 0x02;
+
+        if((resultado & 0xFF) == 0){
+            this.FLAG |= 0x40;
+        }
+
+        //flag de carry
+        if(valB > valA){
+            this.FLAG |= 0x01;
+        }
+
+        this.AC = (byte) (resultado & 0xFF);
+        this.PC++;
+
+        System.out.println("SUB B realizado. AC: " + (AC & 0xFF) + " Carry: " + (FLAG & 0x01));
+    }
+
+    public void run(){
+        while(true){
+            int opcode = MEM[PC] & 0xFF;
+
+            if(opcode == 0x76){
+                System.out.println("FIM (HALT).");
+                break;
+            }
+
+            switch(opcode){
+                case 0x80:
+                    executeAddAB();
+                    break;
+
+                case 0x00:
+                    PC++;
+                    break;
+
+                case 0x3E:
+                    executeLdAn();
+                    break;
+
+                case 0x06:
+                    executeLdBn();
+                    break;
+
+                case 0x90:
+                    executeSubB();
+                    break;
+
+                default:
+                    System.out.println("ERRO");
+                    return;
+            }
+        }
+    }
 }

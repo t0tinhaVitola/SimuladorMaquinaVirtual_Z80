@@ -1,0 +1,5 @@
+LD A, 60
+LD B, 7
+ADD A, B
+SUB B
+HALT
