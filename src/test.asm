@@ -1,0 +1,3 @@
+LD A, 12
+ADD A, B
+HALT
