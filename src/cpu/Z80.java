@@ -60,31 +60,64 @@ public class Z80{
         }
     }
 
+    void setRegister(int code, byte value){
+        switch(code){
+            case 0b000: B = value; break;
+            case 0b001: C = value; break;
+            case 0b010: D = value; break;
+            case 0b011: E = value; break;
+            case 0b100: H = value; break;
+            case 0b101: L = value; break;
+            case 0b111: A = value; break;
+            default: throw new RuntimeException("Invalid Register");
+        }
+    }
+
     public void run(){
         while (true){
             int opcode = Byte.toUnsignedInt(MEM[PC++]);
             
             //instrucoes fixas 
             switch(opcode){
-                case 0x00: //NOP
-                    break;
-                
-                case 0x76: //HALT 
-                    return;
-
-                case 0x3E: //LD A, n 
-                    A = MEM[PC++];
-                    break;
+                case 0x00: break; //NOP
+                case 0x76: return; //HALT
             }
 
             //instrucoes genericas
 
-            //ADD A,r 
+            //ADD A,r
             if((opcode & 0b11111000) == 0b10000000){
-                int regCode = opcode & 0b0000111;
-                byte value = getRegister(regCode); 
-                A += value;
+                int regCode = opcode & 0b111; 
+                A += getRegister(regCode);
+            }
+
+            //LD r, r'
+            if((opcode & 0b11000000) == 0b01000000){
+                int src = opcode & 0b111;
+                int dst = (opcode >> 3) & 0b111;
+
+                setRegister(dst, getRegister(src));
+            }
+
+            //LD r, n
+            if((opcode & 0b11000111) == 0b00000110){
+                int regCode = (opcode >> 3) & 0b111;
+                byte value = MEM[PC++];
+
+                setRegister(regCode, value);
             }
         }
+    }
+
+    public void display_registers(){
+        System.out.printf("\nA: %d", A);
+        System.out.printf("\nB: %d", B);
+        System.out.printf("\nC: %d", C);
+        System.out.printf("\nD: %d", D);
+        System.out.printf("\nE: %d", E);
+        System.out.printf("\nH: %d", H);
+        System.out.printf("\nL: %d", L);
+        System.out.printf("\nF: %d", F);
+        System.out.printf("\n\nPC: %d", PC);
     }
 }
