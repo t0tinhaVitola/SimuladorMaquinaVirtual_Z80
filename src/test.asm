@@ -1,4 +1,8 @@
 LD A, 12
 LD B, 3
 ADD A, B
+LD H, 16
+LD L, 0
+LD (HL), B
+LD C, (HL)
 HALT

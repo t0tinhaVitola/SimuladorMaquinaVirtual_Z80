@@ -28,6 +28,7 @@ public class Translator {
         registerTable.put("E", 0b011 );
         registerTable.put("H", 0b100 );
         registerTable.put("L", 0b101 );
+        registerTable.put("(HL)", 0b110);
     }
 
     public ArrayList<Byte> mnemonicsToBinary( String mnemonic ){
@@ -36,7 +37,7 @@ public class Translator {
         String[] temp;
         int opcode = 0;
         switch( tokens[0] ){
-            case "LD": { // Faltam ainda 2 instruções de load que eu não fiz pq não entendi oq elas querem dizer. "LD r, (HL)"" e "LD (HL), r"
+            case "LD": { // LD HL, r e LD r, HL implementados
                 temp = tokens[1].split( "," );
 
                 int destiny = registerTable.get( temp[0].trim() );

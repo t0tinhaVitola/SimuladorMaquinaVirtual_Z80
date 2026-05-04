@@ -55,6 +55,7 @@ public class Z80{
             case 0b011: return E;
             case 0b100: return H;
             case 0b101: return L;
+            case 0b110: return MEM[getHLAddress()];
             case 0b111: return A;
             default: throw new RuntimeException("Invalid Register");
         }
@@ -68,10 +69,16 @@ public class Z80{
             case 0b011: E = value; break;
             case 0b100: H = value; break;
             case 0b101: L = value; break;
+            case 0b110: MEM[getHLAddress()] = value; break;
             case 0b111: A = value; break;
             default: throw new RuntimeException("Invalid Register");
         }
     }
+
+    int getHLAddress() {
+        return ((H & 0xFF) << 8) | (L & 0xFF);
+    }
+
 
     public void run(){
         while (true){

@@ -22,4 +22,8 @@ public class Main {
 //javac Main.java
 //java Main test.asm
 
+//alternativamente:
+//javac -d bin src/Main.java src/cpu/*.java src/util/*.java
+//java -cp bin Main src/test.asm
+
 //OBS: voce configura o valor de N no 'test.asm' e tem que estar na pasta src
