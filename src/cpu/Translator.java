@@ -33,7 +33,7 @@ public class Translator {
 
     public ArrayList<Byte> mnemonicsToBinary( String mnemonic ){
         String[] tokens = mnemonic.split( "\\s+", 2 );
-        ArrayList<Byte> somethingUHD = new ArrayList<>();
+        ArrayList<Byte> binary_opcode = new ArrayList<>();
         String[] temp;
         int opcode = 0;
         switch( tokens[0] ){
@@ -47,13 +47,13 @@ public class Translator {
                     origin = registerTable.get( temp[1].trim() ); // LD r, r'
                 } else {
                     opcode = 0b00000000 + (destiny << 3 ) + 0b110; // LD r, n
-                    somethingUHD.add( ( byte ) opcode );
-                    somethingUHD.add( ( byte ) Integer.parseInt( temp[1].trim() ) );
+                    binary_opcode.add( ( byte ) opcode );
+                    binary_opcode.add( ( byte ) Integer.parseInt( temp[1].trim() ) );
                     break;
                 }
 
                 opcode = 0b01000000 + ( destiny << 3 ) + origin;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "ADD": {
@@ -65,7 +65,7 @@ public class Translator {
                 int operand = registerTable.get( temp[1].trim() );
 
                 opcode = 0b10000000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "SUB": {
@@ -77,7 +77,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b10010000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "INC": {
@@ -89,7 +89,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b00000100 + (operand << 3);
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "DEC": {
@@ -101,7 +101,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b00000101 + (operand << 3);
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "AND": {
@@ -113,7 +113,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b10100000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "OR": {
@@ -125,7 +125,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b10110000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "XOR": {
@@ -137,7 +137,7 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b10101000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "CP": {
@@ -149,11 +149,11 @@ public class Translator {
                 int operand = registerTable.get( temp[0].trim() );
 
                 opcode = 0b10111000 + operand;
-                somethingUHD.add( ( byte ) opcode );
+                binary_opcode.add( ( byte ) opcode );
                 break;
             }
             case "JP": {
-                somethingUHD.add( ( byte ) 0xC3 );
+                binary_opcode.add( ( byte ) 0xC3 );
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
@@ -168,18 +168,18 @@ public class Translator {
                     throw new IllegalArgumentException("O offset está fora dos limites.");
                 }
 
-                somethingUHD.add( ( byte ) 0x18 );
-                somethingUHD.add( ( byte ) offset );
+                binary_opcode.add( ( byte ) 0x18 );
+                binary_opcode.add( ( byte ) offset );
                 break;
             }
 
             case "CALL": {
-                somethingUHD.add( ( byte ) 0xCD );
+                binary_opcode.add( ( byte ) 0xCD );
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
             case "RET": {
-                somethingUHD.add( ( byte ) 0xC9 );
+                binary_opcode.add( ( byte ) 0xC9 );
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
@@ -192,16 +192,16 @@ public class Translator {
                 break;
             }
             case "NOP": {
-                somethingUHD.add( ( byte ) 0x00 );
+                binary_opcode.add( ( byte ) 0x00 );
                 break;
             }
             case "HALT": {
-                somethingUHD.add( ( byte ) 0x76 );
+                binary_opcode.add( ( byte ) 0x76 );
                 break;
             }
         }
 
-        return somethingUHD; 
+        return binary_opcode; 
     }
 
     public boolean isNumber( String a ) {
