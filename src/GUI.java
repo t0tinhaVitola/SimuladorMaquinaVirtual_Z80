@@ -8,9 +8,6 @@ import java.io.File;
 
 public class GUI extends JFrame {
 
-    // -------------------------------------------------------------------------
-    // Cores do tema retro verde-terminal
-    // -------------------------------------------------------------------------
     // vibe de computador antigo
     static final Color BG        = new Color(13, 17, 23);
     static final Color PANEL_BG  = new Color(22, 27, 34);
@@ -24,16 +21,10 @@ public class GUI extends JFrame {
     static final Font  MONO_BIG  = new Font("Monospaced", Font.BOLD, 15);
     static final Font  TITLE_F   = new Font("Monospaced", Font.BOLD, 12);
 
-    // -------------------------------------------------------------------------
-    // Estado
-    // -------------------------------------------------------------------------
-    Z80 z80 = new Z80();          // o cérebro do emulador
-    String loadedFilePath = null; // guarda o caminho do arquivo .asm que a gente abriu
-    Timer autoRunTimer;           // timer que faz o programa rodar passo a passo automático
+    Z80 z80 = new Z80();          
+    String loadedFilePath = null; 
+    Timer autoRunTimer;           // timer que faz rodar passo a passo
 
-    // -------------------------------------------------------------------------
-    // Componentes da UI
-    // -------------------------------------------------------------------------
     JLabel lblStatus;             // a barrinha de status lá embaixo
 
     // Registradores principais (os rótulos que mostram os valores)
@@ -53,9 +44,7 @@ public class GUI extends JFrame {
     // Botões que a gente clica
     JButton btnLoad, btnStep, btnRun, btnReset;
 
-    // -------------------------------------------------------------------------
-    // Construtor
-    // -------------------------------------------------------------------------
+
     public GUI() {
         super("Z80 Emulator — Simulador");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -77,9 +66,6 @@ public class GUI extends JFrame {
         setVisible(true);                 // mostra pro usuário
     }
 
-    // =========================================================================
-    // BARRA SUPERIOR — título + botões
-    // =========================================================================
     private JPanel buildTopBar() {
         // A parte de cima com o título e os botões
         JPanel p = new JPanel(new BorderLayout());
@@ -133,9 +119,6 @@ public class GUI extends JFrame {
         return b;
     }
 
-    // =========================================================================
-    // PAINEL DO CÓDIGO FONTE
-    // =========================================================================
     private JPanel buildSourcePanel() {
         // Painel da esquerda: mostra o código .asm linha a linha
         JPanel p = darkPanel("📄 Código Fonte (.asm)", 340);
@@ -191,9 +174,6 @@ public class GUI extends JFrame {
         }
     }
 
-    // =========================================================================
-    // PAINEL CENTRAL — Registradores + Flags
-    // =========================================================================
     private JPanel buildCenterPanel() {
         // Junta os registradores e as flags no meio da tela
         JPanel outer = new JPanel(new BorderLayout(0, 6));
@@ -259,9 +239,6 @@ public class GUI extends JFrame {
         return sep;
     }
 
-    // =========================================================================
-    // FLAGS
-    // =========================================================================
     private JPanel buildFlagsPanel() {
         // Mostra as flags de Status: S, Z, H, P/V, N, C
         JPanel p = darkPanel("🚩 Flags (Registrador F)", -1);
@@ -309,9 +286,6 @@ public class GUI extends JFrame {
         lbl.setBackground(on ? new Color(0, 60, 30) : new Color(30, 38, 48));
     }
 
-    // =========================================================================
-    // MEMÓRIA (Hex Dump)
-    // =========================================================================
     private JPanel buildMemoryPanel() {
         // Painel da direita: mostra os primeiros 256 bytes da memória em hexa
         JPanel p = darkPanel("💾 Memória (primeiros 256 bytes)", 320);
@@ -330,9 +304,6 @@ public class GUI extends JFrame {
         return p;
     }
 
-    // =========================================================================
-    // STATUS BAR
-    // =========================================================================
     private JPanel buildStatusBar() {
         // A barrinha cinza lá embaixo, que mostra mensagens pro usuário
         JPanel p = new JPanel(new BorderLayout());
@@ -347,9 +318,7 @@ public class GUI extends JFrame {
         return p;
     }
 
-    // =========================================================================
-    // Utilitário: cria painel escuro com título
-    // =========================================================================
+
     private JPanel darkPanel(String title, int preferredWidth) {
         // Cria um painel com fundo escuro e uma "cabeça" com título
         JPanel p = new JPanel(new BorderLayout());
@@ -372,9 +341,6 @@ public class GUI extends JFrame {
         return p;
     }
 
-    // =========================================================================
-    // AÇÕES DOS BOTÕES (onde a mágica acontece)
-    // =========================================================================
     private void onLoad() {
         // Carrega um arquivo .asm do computador
         if (autoRunTimer != null) autoRunTimer.stop();
@@ -498,9 +464,6 @@ public class GUI extends JFrame {
         sourceList.ensureIndexIsVisible(0);
     }
 
-    // =========================================================================
-    // ATUALIZA TODA A UI com o estado atual do Z80
-    // =========================================================================
     private void updateUI() {
         // Pega todos os valores do Z80 e mostra nos componentes
         valA.setText(fmt8(z80.A));
@@ -559,17 +522,11 @@ public class GUI extends JFrame {
         lblStatus.setText("  " + msg);
     }
 
-    // =========================================================================
-    // Helpers de formatação
-    // =========================================================================
     private String fmt8(byte b) {
         int v = b & 0xFF;
         return String.format("0x%02X  (%3d)", v, v);
     }
 
-    // =========================================================================
-    // MAIN
-    // =========================================================================
     public static void main(String[] args) {
         // Tenta deixar o visual mais bonitinho
         try {
