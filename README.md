@@ -4,3 +4,7 @@ baseada no microprocessador Z80 da Zilog, um processador clássico de 8 bits amp
 utilizado em sistemas embarcados e microcomputadores históricos.
 
 
+Para compilar manualmente 
+javac -d bin src\Main.java src\GUI.java src\cpu\*.java src\util\*.java
+Para rodar 
+java -cp bin Main src\test.asm

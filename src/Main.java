@@ -1,29 +1,18 @@
 import cpu.Z80;
+
 public class Main {
-    public static void main(String[] args){ 
-        try{
-             if(args.length == 0){
-                System.out.println("Uso: java Main arquivo.asm");
-                return;
-             }
-             Z80 z80 = new Z80(args[0]);
-
-             z80.run();
-
-             z80.display_registers();   
-        }catch(Exception e){
-            System.out.println("Erro na leitura do arquivo");
-            e.printStackTrace();
-        }
+    public static void main(String[] args) {
+        // Lança a interface gráfica, passando o arquivo .asm se fornecido
+        GUI.main(args);
     }
 }
 
-//Para executar o Z80, execute os seguintes comandos:
-//javac Main.java
-//java Main test.asm
-
-//alternativamente:
-//javac -d bin src/Main.java src/cpu/*.java src/util/*.java
-//java -cp bin Main src/test.asm
-
-//OBS: voce configura o valor de N no 'test.asm' e tem que estar na pasta src
+// ─────────────────────────────────────────────────────────────────────────────
+// Para compilar e executar:
+//
+//   javac -d bin src/Main.java src/GUI.java src/cpu/*.java src/util/*.java
+//   java -cp bin Main src/test.asm
+//
+// Ou sem arquivo (usa o botão Carregar na janela):
+//   java -cp bin Main
+// ─────────────────────────────────────────────────────────────────────────────
