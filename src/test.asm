@@ -1,5 +1,5 @@
 LD A, 12
-LD B, 3
+LD B, A
 ADD A, B
 LD H, 16
 LD L, 0

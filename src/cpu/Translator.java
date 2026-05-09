@@ -3,7 +3,6 @@ import java.util.*;
 
 public class Translator {
     Map<String, Integer> fixedInstructionsTable = new HashMap<>();
-    Map<String, Integer> SymbolTable = new HashMap<>();
     Map<String, Integer> registerTable = new HashMap<>();
 
     public Translator(){
@@ -40,6 +39,10 @@ public class Translator {
             case "LD": { // LD HL, r e LD r, HL implementados
                 temp = tokens[1].split( "," );
 
+                if ( temp.length != 2 ) {
+                    throw new IllegalArgumentException("LD no formato errado! LD r, r' ou LD r, n");
+                }
+
                 int destiny = registerTable.get( temp[0].trim() );
                 int origin;
 
@@ -58,9 +61,10 @@ public class Translator {
             }
             case "ADD": {
                 temp = tokens[1].split( "," );
-                
-                if ( !temp[0].trim().equals( "A" ) )
-                    break;
+
+                if ( temp.length != 2 || !(temp[0].trim().equals("A"))) {
+                    throw new IllegalArgumentException("ADD no formato errado! ADD A, r'");
+                }                
                 
                 int operand = registerTable.get( temp[1].trim() );
 
@@ -153,7 +157,13 @@ public class Translator {
                 break;
             }
             case "JP": {
+                temp = tokens[1].split( "," );
+                if ( temp.length != 1 ) {
+                    throw new IllegalArgumentException("JP não está no formato esperado! (JP rr)");
+                }
+
                 binary_opcode.add( ( byte ) 0xC3 );
+                
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
@@ -174,30 +184,57 @@ public class Translator {
             }
 
             case "CALL": {
+                temp = tokens[1].split( "," );
+                if ( temp.length != 1 ) {
+                    throw new IllegalArgumentException("CALL não está no formato esperado! (CALL rr)");
+                }
+
                 binary_opcode.add( ( byte ) 0xCD );
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
             case "RET": {
+                temp = tokens[1].split( "," );
+                if ( temp.length != 0 ) {
+                    throw new IllegalArgumentException("RET não está no formato esperado! (RET)");
+                }
                 binary_opcode.add( ( byte ) 0xC9 );
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
             case "PUSH": {
+                temp = tokens[1].split( "," );
+                if ( temp.length != 1 ) {
+                    throw new IllegalArgumentException("PUSH não está no formato esperado! (PUSH qq)");
+                }
+
                 //Não soube aplicar a lógica de par de registradores
                 break;
             }
             case "POP": {
+                temp = tokens[1].split( "," );
+                if ( temp.length != 1 ) {
+                    throw new IllegalArgumentException("POP não está no formato esperado! (POP qq)");
+                }
                 //Não soube aplicar a lógica de par de registradores
                 break;
             }
             case "NOP": {
+                if ( tokens.length != 1 ) {
+                    throw new IllegalArgumentException("NOP não está no formato esperado! (NOP)");
+                }
+
                 binary_opcode.add( ( byte ) 0x00 );
                 break;
             }
             case "HALT": {
+                if ( tokens.length != 1 ) {
+                    throw new IllegalArgumentException("HALT não está no formato esperado! (HALT)");
+                }
                 binary_opcode.add( ( byte ) 0x76 );
                 break;
+            } default: {
+                throw new IllegalArgumentException("Instrução incorreta ou não-existente."); 
             }
         }
 
