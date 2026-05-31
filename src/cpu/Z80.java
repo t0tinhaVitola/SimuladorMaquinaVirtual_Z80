@@ -109,8 +109,8 @@ public class Z80 {
     }
 
     int getHLAddress() {
-        return ((H & 0xFF) << 8) | (L & 0xFF);
-    }
+        return ((H & 0xFF) << 8) | (L & 0xFF); // 11101010 00000000 - H
+    }                                          // 00000000 11110010 - L
 
     // -------------------------------------------------------------------------
     // STEP: executes a single instruction and returns true if can continue

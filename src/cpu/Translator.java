@@ -249,4 +249,33 @@ public class Translator {
             return false;
         }
     }
+
+    public int getInstructionSize(String mneumonic){
+        String[] tokens = mneumonic.split("\\s+", 2);
+        String op = tokens[0].toUpperCase();
+
+        switch(op) {
+            case "JR":
+                return 2;
+
+            case "LD":
+                if(tokens.length > 1){
+                    String[] args = tokens[1].split(",");
+                    if(args.length == 2 && isNumber(args[1].trim())){
+                        return 2; // LD r, n
+                    }
+                }
+                return 1; //LD r, r'
+            
+                case "JP":
+                    return 3;
+                case "CALL":
+                    return 3;
+                
+                default:
+                    return 1; //todas as outras
+        }
+    }
+
+
 }
