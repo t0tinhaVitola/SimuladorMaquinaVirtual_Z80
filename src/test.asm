@@ -1,8 +1,25 @@
 LD A, 12
 LD B, A
 ADD A, B
+LD C, 34
+SUB B
+CALL LAAAAEEEELLLEEEE
+LD B, A
+JP magrao
+CP C
+CP D
+CP L
+CP H
+
+
+magrao:
 LD H, 16
 LD L, 0
 LD (HL), B
 LD C, (HL)
+
 HALT
+
+LAAAAEEEELLLEEEE:
+ADD A, C
+RET

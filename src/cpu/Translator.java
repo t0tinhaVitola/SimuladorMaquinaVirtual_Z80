@@ -30,11 +30,12 @@ public class Translator {
         registerTable.put("(HL)", 0b110);
     }
 
-    public ArrayList<Byte> mnemonicsToBinary( String mnemonic ){
+    public ArrayList<Byte> mnemonicsToBinary( String mnemonic, Map<String, Integer> symbolTable, int currentPc ){
         String[] tokens = mnemonic.split( "\\s+", 2 );
         ArrayList<Byte> binary_opcode = new ArrayList<>();
         String[] temp;
         int opcode = 0;
+
         switch( tokens[0] ){
             case "LD": { // LD HL, r e LD r, HL implementados
                 temp = tokens[1].split( "," );
@@ -158,11 +159,26 @@ public class Translator {
             }
             case "JP": {
                 temp = tokens[1].split( "," );
+                String labelOrAddress = temp[0].trim();
+                int targetAddress = 0;
+
+
+
                 if ( temp.length != 1 ) {
                     throw new IllegalArgumentException("JP não está no formato esperado! (JP rr)");
                 }
 
                 binary_opcode.add( ( byte ) 0xC3 );
+
+                if(symbolTable.containsKey(labelOrAddress)){
+                    targetAddress = symbolTable.get(labelOrAddress);
+                } else if(isNumber(labelOrAddress)){
+                    targetAddress = Integer.parseInt(labelOrAddress);
+                }else{
+                    throw new IllegalArgumentException("Label nao encontrada: " + labelOrAddress);
+                }
+                binary_opcode.add((byte) (targetAddress & 0xFF)); //low byte
+                binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF)); //high byte
                 
                 //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
@@ -185,21 +201,29 @@ public class Translator {
 
             case "CALL": {
                 temp = tokens[1].split( "," );
-                if ( temp.length != 1 ) {
-                    throw new IllegalArgumentException("CALL não está no formato esperado! (CALL rr)");
+                String labelOrAddress = temp[0].trim();
+                int targetAddress = 0;
+
+                binary_opcode.add((byte) 0xCD);
+
+                if (symbolTable.containsKey(labelOrAddress)) {
+                    targetAddress = symbolTable.get(labelOrAddress);
+                }else if(isNumber(labelOrAddress)){
+                    targetAddress = Integer.parseInt(labelOrAddress);
                 }
 
-                binary_opcode.add( ( byte ) 0xCD );
-                //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
+
+                binary_opcode.add((byte) (targetAddress & 0xFF));
+                binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF));
+                
                 break;
             }
             case "RET": {
-                temp = tokens[1].split( "," );
-                if ( temp.length != 0 ) {
+                if ( tokens.length != 1 ) {
                     throw new IllegalArgumentException("RET não está no formato esperado! (RET)");
                 }
                 binary_opcode.add( ( byte ) 0xC9 );
-                //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
+                
                 break;
             }
             case "PUSH": {
@@ -233,9 +257,13 @@ public class Translator {
                 }
                 binary_opcode.add( ( byte ) 0x76 );
                 break;
-            } default: {
+            } 
+            
+            default: {
                 throw new IllegalArgumentException("Instrução incorreta ou não-existente."); 
             }
+            
+
         }
 
         return binary_opcode; 

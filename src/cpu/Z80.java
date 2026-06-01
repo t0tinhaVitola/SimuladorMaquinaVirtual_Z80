@@ -42,33 +42,66 @@ public class Z80 {
         pcToLine.clear();
         lineToPc.clear();
 
+        Map<String, Integer> tabelaDeSimbolos = new HashMap<>();
+
         try (BufferedReader buffer = new BufferedReader(new FileReader(fileAddress))) {
             String line;
-            int instructionCounter = 0;
-            int sourceLineIndex = 0;
-
-            while ((line = buffer.readLine()) != null) {
-                // Store raw source line (remove carriage returns for Windows files)
+            while((line = buffer.readLine()) != null){
                 sourceLines.add(line.replace("\r", ""));
-
-                String mnemonics = line.split("#")[0].trim();
-                if (!mnemonics.isEmpty()) {
-                    List<Byte> instructions = trans.mnemonicsToBinary(mnemonics);
-
-                    lineToPc.put(sourceLineIndex, instructionCounter);
-                    for (int i = 0; i < instructions.size(); i++) {
-                        pcToLine.put(instructionCounter, sourceLineIndex);
-                        MEM[instructionCounter++] = instructions.get(i);
-                        if (instructionCounter >= MEMSIZE)
-                            throw new RuntimeException("Arquivo surpassou o limite de instruções");
-                    }
-                } else {
-                    // Blank/comment line maps to current counter
-                    lineToPc.put(sourceLineIndex, instructionCounter);
-                }
-                sourceLineIndex++;
             }
         }
+
+        //mapear labels
+        int locationCounter = 0;
+
+        for(String rawLine : sourceLines){
+            String line = rawLine.split("#")[0].trim();
+            if(line.isEmpty()){
+                continue;
+            }
+            if(line.contains(":")){
+                String[] parts = line.split(":", 2);
+                String labelName = parts[0].trim();
+
+                tabelaDeSimbolos.put(labelName, locationCounter);
+
+                line = parts[1].trim();
+            }
+
+            if(!line.isEmpty()){
+                locationCounter += trans.getInstructionSize(line);
+            }
+        }
+
+        //traducao
+        int instructionCounter = 0;
+
+        for(int LineIndex = 0; LineIndex < sourceLines.size(); LineIndex++){
+            String line = sourceLines.get(LineIndex).split("#")[0].trim();
+
+            if(line.contains(":")){
+                line = line.split(":", 2)[1].trim();
+            }
+
+            if(!line.isEmpty()){
+                List<Byte> instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter);
+                lineToPc.put(LineIndex, instructionCounter);
+
+                for(int i = 0; i< instructions.size(); i++){
+                    pcToLine.put(instructionCounter, LineIndex);
+                    MEM[instructionCounter++] = instructions.get(i);
+                    if(instructionCounter >= MEMSIZE){
+                        throw new RuntimeException("Arquivo ultrapassou o limite de memoria");
+
+                    }
+                }
+            } else {
+                lineToPc.put(LineIndex, instructionCounter);
+            }
+        }
+
+        System.out.println("Tabela de Simbolos Gerada: " + tabelaDeSimbolos); //debug
+
     }
 
     // Returns the source line currently being executed (based on PC)
