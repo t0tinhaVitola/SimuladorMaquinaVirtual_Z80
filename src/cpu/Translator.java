@@ -30,7 +30,7 @@ public class Translator {
         registerTable.put("(HL)", 0b110);
     }
 
-    public ArrayList<Byte> mnemonicsToBinary( String mnemonic, Map<String, Integer> symbolTable, int currentPc ){
+    public ArrayList<Byte> mnemonicsToBinary( String mnemonic, Map<String, Integer> symbolTable, int currentPc, Z80 currentZ80 ){
         String[] tokens = mnemonic.split( "\\s+", 2 );
         ArrayList<Byte> binary_opcode = new ArrayList<>();
         String[] temp;
@@ -256,14 +256,11 @@ public class Translator {
                     throw new IllegalArgumentException("HALT não está no formato esperado! (HALT)");
                 }
                 binary_opcode.add( ( byte ) 0x76 );
+                currentZ80.setIsThereAnyHalt( true );
                 break;
-            } 
-            
-            default: {
-                throw new IllegalArgumentException("Instrução incorreta ou não-existente."); 
             }
-            
-
+            default:
+                throw new IllegalArgumentException("Instrução não existente");
         }
 
         return binary_opcode; 

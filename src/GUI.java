@@ -1,10 +1,10 @@
 import cpu.Z80;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import javax.swing.*;
+import javax.swing.border.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class GUI extends JFrame {
 

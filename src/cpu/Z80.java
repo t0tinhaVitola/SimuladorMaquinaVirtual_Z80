@@ -8,6 +8,7 @@ public class Z80 {
     public byte A, B, C, D, E, H, L, F;
     public int PC, SP, IX, IY;
     public boolean halted = false;
+    private static boolean isThereAnyHalt = false;
 
     public final int MEMSIZE = 65536;
     public byte[] MEM = new byte[MEMSIZE];
@@ -82,12 +83,18 @@ public class Z80 {
             if(line.contains(":")){
                 line = line.split(":", 2)[1].trim();
             }
-
+            
             if(!line.isEmpty()){
-                List<Byte> instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter);
+                List<Byte> instructions = null;
+                String[] ev_currentString = line.split("\\s+");
+                if ( verifyBinaryInstruction(ev_currentString[0]) == true ) {
+                    instructions = insertBinaryIntoByteList(line);
+                } else {
+                    instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter, this);
+                }
                 lineToPc.put(LineIndex, instructionCounter);
 
-                for(int i = 0; i< instructions.size(); i++){
+                for(int i = 0; i < instructions.size(); i++){
                     pcToLine.put(instructionCounter, LineIndex);
                     MEM[instructionCounter++] = instructions.get(i);
                     if(instructionCounter >= MEMSIZE){
@@ -101,7 +108,9 @@ public class Z80 {
         }
 
         System.out.println("Tabela de Simbolos Gerada: " + tabelaDeSimbolos); //debug
-
+        if ( isThereAnyHalt != true ) {
+            throw new Exception ("Programa não foi encerrado devidamente");
+        }
     }
 
     // Returns the source line currently being executed (based on PC)
@@ -340,5 +349,42 @@ public class Z80 {
         System.out.printf("A=%02X B=%02X C=%02X D=%02X E=%02X H=%02X L=%02X F=%02X%n",
             A & 0xFF, B & 0xFF, C & 0xFF, D & 0xFF, E & 0xFF, H & 0xFF, L & 0xFF, F & 0xFF);
         System.out.printf("PC=%04X SP=%04X IX=%04X IY=%04X%n", PC, SP, IX, IY);
+    }
+
+    public void setIsThereAnyHalt ( boolean a ) {
+        isThereAnyHalt = a;
+    }
+
+    public boolean verifyBinaryInstruction( String line ){
+        if ( line == null || line.length() != 8 ) {
+            return false;
+        }
+
+        for ( int i = 0; i < line.length(); i++ ) {
+            if ( line.charAt(i) != '1' && line.charAt(i) != '0' ) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public Byte stringToByte ( String line ) {
+        int result = Integer.parseInt( line, 2 );
+
+        return (byte) result;
+    }
+
+    public List<Byte> insertBinaryIntoByteList ( String line ) {
+        List <Byte> binary_opcode = new ArrayList<>();
+
+        String[] newCoolString = line.split("\\s+");
+        for ( int i = 0; i < newCoolString.length; i++ ) {
+            binary_opcode.add( stringToByte( newCoolString[i]) );
+            if ( newCoolString[i].equals( "01110110" )) {
+                setIsThereAnyHalt(true);
+            }
+        }
+        
+        return binary_opcode;
     }
 }
