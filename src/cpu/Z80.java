@@ -52,6 +52,9 @@ public class Z80 {
             }
         }
 
+        MacroProcessor mp = new MacroProcessor();
+        sourceLines = new ArrayList<>(mp.process(sourceLines));
+
         //mapear labels
         int locationCounter = 0;
 
