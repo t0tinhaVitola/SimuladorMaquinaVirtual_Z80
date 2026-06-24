@@ -10,6 +10,9 @@ public class Z80 {
     public boolean halted = false;
     private static boolean isThereAnyHalt = false;
 
+    private boolean hasBinary = false;
+    private boolean hasMnemonic = false;
+
     public final int MEMSIZE = 65536;
     public byte[] MEM = new byte[MEMSIZE];
 
@@ -91,9 +94,23 @@ public class Z80 {
                 List<Byte> instructions = null;
                 String[] ev_currentString = line.split("\\s+");
                 if ( verifyBinaryInstruction(ev_currentString[0]) == true ) {
-                    instructions = insertBinaryIntoByteList(line);
+                    if ( ( hasBinary && !hasMnemonic ) || ( !hasBinary && !hasMnemonic ) ) {
+                        instructions = insertBinaryIntoByteList(line);
+                        if ( !hasBinary ) {
+                            hasBinary = true;
+                        }
+                    } else {
+                        throw new Exception("Não é aceito programas com mistura entre binário e mnemonico");
+                    }
                 } else {
-                    instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter, this);
+                    if ( ( hasMnemonic && !hasBinary ) || ( !hasBinary && !hasMnemonic ) ) {
+                        instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter, this);
+                        if ( !hasMnemonic ) {
+                            hasMnemonic = true;
+                        }
+                    } else { 
+                        throw new Exception("Não é aceito programas com mistura entre binário e mnemonico");
+                    }
                 }
                 lineToPc.put(LineIndex, instructionCounter);
 
