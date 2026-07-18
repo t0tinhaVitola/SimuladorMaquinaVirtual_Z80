@@ -4,11 +4,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.*;
 
+import util.ObjectModule;
+
 public class Z80 {
     public byte A, B, C, D, E, H, L, F;
     public int PC, SP, IX, IY;
     public boolean halted = false;
-    private static boolean isThereAnyHalt = false;
 
     private boolean hasBinary = false;
     private boolean hasMnemonic = false;
@@ -27,41 +28,47 @@ public class Z80 {
         reset();
     }
 
-    public Z80(String fileAddress) throws Exception {
-        reset();
-        loadFile(fileAddress);
-    }
-
-    public void reset() {
+    public void reset(){
         PC = 0; SP = 0xFFFF;
         A = B = C = D = E = H = L = F = 0;
         IX = IY = 0;
         halted = false;
         Arrays.fill(MEM, (byte) 0);
+        hasBinary = hasMnemonic = false;
     }
-
-    public void loadFile(String fileAddress) throws Exception {
+    public void loadFiles(java.util.List<String> paths) throws Exception {
         reset();
         sourceLines.clear();
         pcToLine.clear();
         lineToPc.clear();
-
-        Map<String, Integer> tabelaDeSimbolos = new HashMap<>();
-
-        try (BufferedReader buffer = new BufferedReader(new FileReader(fileAddress))) {
-            String line;
-            while((line = buffer.readLine()) != null){
-                sourceLines.add(line.replace("\r", ""));
+        List<ObjectModule> modules = new ArrayList<>();
+        MacroProcessor mp = new MacroProcessor();
+        for(String path : paths){
+            List<String> sL = new ArrayList<>();
+            try (BufferedReader buffer = new BufferedReader(new FileReader(path))){
+                String line;
+                while((line = buffer.readLine()) != null){
+                    sL.add(line.replace("\r", ""));
+                }
             }
+            modules.add(Assemble(sL, mp));
         }
 
-        MacroProcessor mp = new MacroProcessor();
-        sourceLines = new ArrayList<>(mp.process(sourceLines));
+        Linker.LinkedProgram program = Linker.linkAbsolute(modules, 0);
+        if(!program.hasHalt){
+            throw new Exception("Programa não foi encerrado devidamente");
+        }
 
-        //mapear labels
+        Linker.load(program, this);
+    }
+    public ObjectModule Assemble(List<String> sL, MacroProcessor mp) throws Exception{
+        ObjectModule oM = new ObjectModule();
+        sL = new ArrayList<>(mp.process(sL));
+        oM.sourceLines = sL;
+
+         //mapear labels
         int locationCounter = 0;
-
-        for(String rawLine : sourceLines){
+        for(String rawLine : sL){
             String line = rawLine.split("#")[0].trim();
             if(line.isEmpty()){
                 continue;
@@ -70,21 +77,17 @@ public class Z80 {
                 String[] parts = line.split(":", 2);
                 String labelName = parts[0].trim();
 
-                tabelaDeSimbolos.put(labelName, locationCounter);
-
+                oM.symbolTablePart.put(labelName, locationCounter);
                 line = parts[1].trim();
             }
-
             if(!line.isEmpty()){
                 locationCounter += trans.getInstructionSize(line);
             }
         }
 
-        //traducao
         int instructionCounter = 0;
-
-        for(int LineIndex = 0; LineIndex < sourceLines.size(); LineIndex++){
-            String line = sourceLines.get(LineIndex).split("#")[0].trim();
+        for(int LineIndex = 0; LineIndex < sL.size(); LineIndex++){
+            String line = sL.get(LineIndex).split("#")[0].trim();
 
             if(line.contains(":")){
                 line = line.split(":", 2)[1].trim();
@@ -92,10 +95,12 @@ public class Z80 {
             
             if(!line.isEmpty()){
                 List<Byte> instructions = null;
+                Integer relocOffsetInInstruction = null;
+                String labelRef = null;
                 String[] ev_currentString = line.split("\\s+");
                 if ( verifyBinaryInstruction(ev_currentString[0]) == true ) {
                     if ( ( hasBinary && !hasMnemonic ) || ( !hasBinary && !hasMnemonic ) ) {
-                        instructions = insertBinaryIntoByteList(line);
+                        instructions = insertBinaryIntoByteList(line, oM);
                         if ( !hasBinary ) {
                             hasBinary = true;
                         }
@@ -104,35 +109,42 @@ public class Z80 {
                     }
                 } else {
                     if ( ( hasMnemonic && !hasBinary ) || ( !hasBinary && !hasMnemonic ) ) {
-                        instructions = trans.mnemonicsToBinary(line, tabelaDeSimbolos, instructionCounter, this);
-                        if ( !hasMnemonic ) {
-                            hasMnemonic = true;
-                        }
+                        Translator.TranslationResult result  = trans.mnemonicsToBinary(line, oM.symbolTablePart, instructionCounter);
+                        instructions = result.bytes;
+                        relocOffsetInInstruction = result.relocOffset;
+                        labelRef = result.labelRef;
+                        if(result.containsHalt) oM.hasHalt = true;
+                        hasMnemonic = true;
                     } else { 
                         throw new Exception("Não é aceito programas com mistura entre binário e mnemonico");
                     }
                 }
-                lineToPc.put(LineIndex, instructionCounter);
+                oM.lineToPc.put(LineIndex, instructionCounter);
 
+                int instructionStart = instructionCounter;
                 for(int i = 0; i < instructions.size(); i++){
-                    pcToLine.put(instructionCounter, LineIndex);
-                    MEM[instructionCounter++] = instructions.get(i);
-                    if(instructionCounter >= MEMSIZE){
-                        throw new RuntimeException("Arquivo ultrapassou o limite de memoria");
-
+                    oM.pcToLine.put(instructionCounter, LineIndex);
+                    oM.code.add(instructions.get(i));
+                    instructionCounter++;
+                    if (instructionCounter >= 65536) {
+                        throw new RuntimeException("Módulo ultrapassou o limite de memória");
+                    }
+                }
+                if (labelRef != null) {
+                    int absOffsetInModule = instructionStart + relocOffsetInInstruction;
+                    if (oM.symbolTablePart.containsKey(labelRef)) {
+                        oM.relocationTable.add(absOffsetInModule);
+                    } else {
+                        oM.externalReferences.put(absOffsetInModule, labelRef);
                     }
                 }
             } else {
-                lineToPc.put(LineIndex, instructionCounter);
+                oM.lineToPc.put(LineIndex, instructionCounter);
             }
         }
-
-        System.out.println("Tabela de Simbolos Gerada: " + tabelaDeSimbolos); //debug
-        if ( isThereAnyHalt != true ) {
-            throw new Exception ("Programa não foi encerrado devidamente");
-        }
+        return oM;
     }
-
+    
     // Returns the source line currently being executed (based on PC)
     public int getCurrentSourceLine() {
         // Walk back from PC to find the latest known mapping
@@ -371,9 +383,7 @@ public class Z80 {
         System.out.printf("PC=%04X SP=%04X IX=%04X IY=%04X%n", PC, SP, IX, IY);
     }
 
-    public void setIsThereAnyHalt ( boolean a ) {
-        isThereAnyHalt = a;
-    }
+    
 
     public boolean verifyBinaryInstruction( String line ){
         if ( line == null || line.length() != 8 ) {
@@ -394,14 +404,14 @@ public class Z80 {
         return (byte) result;
     }
 
-    public List<Byte> insertBinaryIntoByteList ( String line ) {
+    public List<Byte> insertBinaryIntoByteList ( String line, ObjectModule oM ) {
         List <Byte> binary_opcode = new ArrayList<>();
 
         String[] newCoolString = line.split("\\s+");
         for ( int i = 0; i < newCoolString.length; i++ ) {
             binary_opcode.add( stringToByte( newCoolString[i]) );
             if ( newCoolString[i].equals( "01110110" )) {
-                setIsThereAnyHalt(true);
+                oM.hasHalt = true;
             }
         }
         

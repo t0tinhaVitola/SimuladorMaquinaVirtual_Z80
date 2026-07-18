@@ -2,6 +2,8 @@ import cpu.Z80;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
+import java.util.Arrays;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -22,7 +24,7 @@ public class GUI extends JFrame {
     static final Font  TITLE_F   = new Font("Monospaced", Font.BOLD, 12);
 
     Z80 z80 = new Z80();          
-    String loadedFilePath = null; 
+    java.util.List<String> loadedFilePaths = new java.util.ArrayList<>();
     Timer autoRunTimer;           // timer que faz rodar passo a passo
 
     JLabel lblStatus;             // a barrinha de status lá embaixo
@@ -342,33 +344,39 @@ public class GUI extends JFrame {
     }
 
     private void onLoad() {
-        // Carrega um arquivo .asm do computador
+        // Carrega um ou mais arquivos .asm do computador (montados isoladamente
+        // e depois ligados pelo Linker num único programa)
         if (autoRunTimer != null) autoRunTimer.stop();
 
         JFileChooser fc = new JFileChooser(".");
         fc.setFileFilter(new FileNameExtensionFilter("Assembly files (*.asm)", "asm"));
-        fc.setDialogTitle("Selecione o arquivo .asm");
+        fc.setDialogTitle("Selecione um ou mais arquivos .asm (Ctrl/Shift para selecionar vários)");
+        fc.setMultiSelectionEnabled(true);
 
-        if (loadedFilePath != null) {
-            fc.setCurrentDirectory(new File(loadedFilePath).getParentFile());
+        if (!loadedFilePaths.isEmpty()) {
+            fc.setCurrentDirectory(new File(loadedFilePaths.get(0)).getParentFile());
         }
 
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File f = fc.getSelectedFile();
+            File[] files = fc.getSelectedFiles();
+            java.util.List<String> paths = new java.util.ArrayList<>();
+            for (File f : files) paths.add(f.getAbsolutePath());
+
             try {
-                z80.loadFile(f.getAbsolutePath());
-                loadedFilePath = f.getAbsolutePath();
+                z80.loadFiles(paths);
+                loadedFilePaths = paths;
 
                 sourceModel.clear();
                 for (String line : z80.sourceLines) {
                     sourceModel.addElement(line);
                 }
 
-                setStatus("✅ Arquivo carregado: " + f.getName() + " — " + z80.sourceLines.size() + " linha(s)");
+                String names = String.join(", ", paths.stream().map(p -> new File(p).getName()).toArray(String[]::new));
+                setStatus("✅ " + paths.size() + " arquivo(s) ligado(s): " + names + " — " + z80.sourceLines.size() + " linha(s)");
                 updateUI();
                 sourceList.ensureIndexIsVisible(0);
 
-            } catch (Exception ex) {
+            }catch(Exception ex){
                 JOptionPane.showMessageDialog(this,
                     "Erro ao carregar arquivo:\n" + ex.getMessage(),
                     "Erro", JOptionPane.ERROR_MESSAGE);
@@ -383,7 +391,7 @@ public class GUI extends JFrame {
             setStatus("🛑 Processador parado (HALT). Clique em ↺ Resetar para reiniciar.");
             return;
         }
-        if (loadedFilePath == null) {
+        if (loadedFilePaths.isEmpty()) {
             setStatus("⚠ Nenhum arquivo carregado. Use 📂 Carregar .asm primeiro.");
             return;
         }
@@ -410,7 +418,7 @@ public class GUI extends JFrame {
             setStatus("🛑 Já parado. Use ↺ Resetar.");
             return;
         }
-        if (loadedFilePath == null) {
+        if (loadedFilePaths.isEmpty()) {
             setStatus("⚠ Nenhum arquivo carregado.");
             return;
         }
@@ -449,10 +457,10 @@ public class GUI extends JFrame {
         btnRun.setEnabled(true);
         btnStep.setEnabled(true);
 
-        if (loadedFilePath != null) {
+        if (!loadedFilePaths.isEmpty()) {
             try {
-                z80.loadFile(loadedFilePath);
-                setStatus("↺ Resetado — " + new File(loadedFilePath).getName());
+                z80.loadFiles(loadedFilePaths);
+                setStatus("↺ Resetado — " + loadedFilePaths.size() + " arquivo(s) religado(s)");
             } catch (Exception ex) {
                 setStatus("❌ Erro ao recarregar: " + ex.getMessage());
             }
@@ -536,14 +544,15 @@ public class GUI extends JFrame {
         SwingUtilities.invokeLater(() -> {
             GUI gui = new GUI();
 
-            // Se passou um arquivo por argumento, carrega na mão
+            // Se passou um ou mais arquivos por argumento, monta e liga todos eles
             if (args.length > 0) {
                 try {
-                    gui.z80.loadFile(args[0]);
-                    gui.loadedFilePath = args[0];
+                    java.util.List<String> paths = Arrays.asList(args);
+                    gui.z80.loadFiles(paths);
+                    gui.loadedFilePaths = new java.util.ArrayList<>(paths);
                     gui.sourceModel.clear();
                     for (String line : gui.z80.sourceLines) gui.sourceModel.addElement(line);
-                    gui.setStatus("✅ Arquivo carregado: " + new File(args[0]).getName());
+                    gui.setStatus("✅ " + paths.size() + " arquivo(s) ligado(s)");
                     gui.updateUI();
                 } catch (Exception e) {
                     gui.setStatus("❌ Erro: " + e.getMessage());

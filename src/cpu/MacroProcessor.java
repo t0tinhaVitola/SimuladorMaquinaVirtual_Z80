@@ -50,15 +50,27 @@ public class MacroProcessor {
                     continue;
                 }
                 body.add(line);
-            }else{ // taquei tooooda a lógica da 2° passagem dentro do else e agora ele funciona em uma única passagem
-                String[] tokens = line.trim().split("\\s+");
-
-                if ( macroTable.containsKey( tokens[0] ) ) {
-                    expandMacro( tokens, output );
-                }else{
+             }else{
+                String label = null;
+                String rest = line;
+                if (rest.contains(":")) {
+                    String[] parts = rest.split(":", 2);
+                    label = parts[0].trim();
+                    rest = parts[1].trim();
+                }
+            
+                String[] tokens = rest.split("\\s+");
+            
+                if (!rest.isEmpty() && macroTable.containsKey(tokens[0])) {
+                    int before = output.size();
+                    expandMacro(tokens, output);
+                    if (label != null && output.size() > before) {
+                        output.set(before, label + ": " + output.get(before));
+                    }
+                } else {
                     output.add(line);
                 }
-            }
+            }           
         }
         return output;
     }

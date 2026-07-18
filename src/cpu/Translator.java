@@ -4,10 +4,12 @@ import java.util.*;
 public class Translator {
     Map<String, Integer> fixedInstructionsTable = new HashMap<>();
     Map<String, Integer> registerTable = new HashMap<>();
+    Map<String, Integer> registerPairTable = new HashMap<>();
 
     public Translator(){
         initializefixedInstructionsTable();
         initializeRegisterTable();
+        initializeRegisterPairTable();
     }
 
     private void initializefixedInstructionsTable(){
@@ -30,13 +32,39 @@ public class Translator {
         registerTable.put("(HL)", 0b110);
     }
 
-    public ArrayList<Byte> mnemonicsToBinary( String mnemonic, Map<String, Integer> symbolTable, int currentPc, Z80 currentZ80 ){
+    private void initializeRegisterPairTable(){
+        registerPairTable.put("BC", 0);
+        registerPairTable.put("DE", 1);
+        registerPairTable.put("HL", 2);
+        registerPairTable.put("AF", 3);
+    }
+
+
+
+    public static class TranslationResult {
+        public final List<Byte> bytes;
+        public final Integer relocOffset;
+        public final String labelRef;
+        public final boolean containsHalt;
+
+        public TranslationResult(List<Byte> bytes, Integer relocOffset, String labelRef, boolean containsHalt) {
+            this.bytes = bytes;
+            this.relocOffset = relocOffset;
+            this.labelRef = labelRef;
+            this.containsHalt = containsHalt;
+        }
+    }
+
+    public TranslationResult mnemonicsToBinary(String mnemonic, Map<String, Integer> symbolTable, int currentPc){
         String[] tokens = mnemonic.split( "\\s+", 2 );
         ArrayList<Byte> binary_opcode = new ArrayList<>();
         String[] temp;
         int opcode = 0;
+        Integer relocOffset = null;
+        String labelRef = null;
+        boolean containsHalt = false;
 
-        switch( tokens[0] ){
+        switch(tokens[0]){
             case "LD": { // LD HL, r e LD r, HL implementados
                 temp = tokens[1].split( "," );
 
@@ -180,22 +208,35 @@ public class Translator {
                 binary_opcode.add((byte) (targetAddress & 0xFF)); //low byte
                 binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF)); //high byte
                 
-                //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
             case "JR": {
-                temp = tokens[1].split( "$" );
-
-                if ( !isNumber( temp[1] ) )
-                    throw new IllegalArgumentException("JR não está no formato esperado! (JR offset)");
-                
-                int offset = Integer.parseInt( temp[1].trim() );
-                if ( offset > 127 || offset < -128 ) {
-                    throw new IllegalArgumentException("O offset está fora dos limites.");
+              
+                if (tokens.length != 2) {
+                    throw new IllegalArgumentException("JR não está no formato esperado! (JR offset ou JR label)");
                 }
 
-                binary_opcode.add( ( byte ) 0x18 );
-                binary_opcode.add( ( byte ) offset );
+                String operand = tokens[1].trim();
+                int offset;
+
+                if (symbolTable.containsKey(operand)) {
+                    int target = symbolTable.get(operand);
+
+                    // PC após ler uma instrução JR fica 2 bytes à frente
+                    offset = target - (currentPc + 2);
+
+                } else if (isNumber(operand)) {
+                    offset = Integer.parseInt(operand);
+                } else {
+                    throw new IllegalArgumentException("Label não encontrada: " + operand);
+                }
+
+                if (offset < -128 || offset > 127) {
+                    throw new IllegalArgumentException("Offset do JR fora do intervalo (-128 a 127).");
+                }
+
+                binary_opcode.add((byte) 0x18);
+                binary_opcode.add((byte) offset);
                 break;
             }
 
@@ -205,14 +246,18 @@ public class Translator {
                 int targetAddress = 0;
 
                 binary_opcode.add((byte) 0xCD);
+                relocOffset = binary_opcode.size();
 
-                if (symbolTable.containsKey(labelOrAddress)) {
-                    targetAddress = symbolTable.get(labelOrAddress);
-                }else if(isNumber(labelOrAddress)){
+                if ( isNumber(labelOrAddress) ) {
                     targetAddress = Integer.parseInt(labelOrAddress);
+                } else {
+                    labelRef = labelOrAddress;
+                    if (symbolTable.containsKey(labelOrAddress)) {
+                        targetAddress = symbolTable.get(labelOrAddress);
+                    } else {
+                        targetAddress = 0;
+                    }
                 }
-
-
                 binary_opcode.add((byte) (targetAddress & 0xFF));
                 binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF));
                 
@@ -232,7 +277,17 @@ public class Translator {
                     throw new IllegalArgumentException("PUSH não está no formato esperado! (PUSH qq)");
                 }
 
-                //Não soube aplicar a lógica de par de registradores
+                String pair = temp[0].trim();
+
+                if(!registerPairTable.containsKey(pair)){
+                    throw new IllegalArgumentException("Par de registradores inválido: " + pair);
+                }
+
+                int qq = registerPairTable.get(pair);
+
+                opcode = 0xC5 + (qq << 4);
+
+                binary_opcode.add((byte) opcode);
                 break;
             }
             case "POP": {
@@ -240,7 +295,18 @@ public class Translator {
                 if ( temp.length != 1 ) {
                     throw new IllegalArgumentException("POP não está no formato esperado! (POP qq)");
                 }
-                //Não soube aplicar a lógica de par de registradores
+
+                String pair = temp[0].trim();
+
+                if(!registerPairTable.containsKey(pair)){
+                    throw new IllegalArgumentException("Par de registradores inválido: " + pair);
+                }
+
+                int qq = registerPairTable.get(pair);
+
+                opcode = 0xC1 + (qq << 4);
+
+                binary_opcode.add((byte) opcode);
                 break;
             }
             case "NOP": {
@@ -256,14 +322,14 @@ public class Translator {
                     throw new IllegalArgumentException("HALT não está no formato esperado! (HALT)");
                 }
                 binary_opcode.add( ( byte ) 0x76 );
-                currentZ80.setIsThereAnyHalt( true );
+                containsHalt = true;
                 break;
             }
             default:
                 throw new IllegalArgumentException("Instrução não existente");
         }
 
-        return binary_opcode; 
+        return new TranslationResult(binary_opcode, relocOffset, labelRef, containsHalt);
     }
 
     public boolean isNumber( String a ) {
