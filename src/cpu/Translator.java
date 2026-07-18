@@ -4,10 +4,12 @@ import java.util.*;
 public class Translator {
     Map<String, Integer> fixedInstructionsTable = new HashMap<>();
     Map<String, Integer> registerTable = new HashMap<>();
+    Map<String, Integer> registerPairTable = new HashMap<>();
 
     public Translator(){
         initializefixedInstructionsTable();
         initializeRegisterTable();
+        initializeRegisterPairTable();
     }
 
     private void initializefixedInstructionsTable(){
@@ -28,6 +30,13 @@ public class Translator {
         registerTable.put("H", 0b100 );
         registerTable.put("L", 0b101 );
         registerTable.put("(HL)", 0b110);
+    }
+
+    private void initializeRegisterPairTable(){
+        registerPairTable.put("BC", 0);
+        registerPairTable.put("DE", 1);
+        registerPairTable.put("HL", 2);
+        registerPairTable.put("AF", 3);
     }
 
     public ArrayList<Byte> mnemonicsToBinary( String mnemonic, Map<String, Integer> symbolTable, int currentPc, Z80 currentZ80 ){
@@ -184,18 +193,32 @@ public class Translator {
                 break;
             }
             case "JR": {
-                temp = tokens[1].split( "$" );
-
-                if ( !isNumber( temp[1] ) )
-                    throw new IllegalArgumentException("JR não está no formato esperado! (JR offset)");
-                
-                int offset = Integer.parseInt( temp[1].trim() );
-                if ( offset > 127 || offset < -128 ) {
-                    throw new IllegalArgumentException("O offset está fora dos limites.");
+              
+                if (tokens.length != 2) {
+                    throw new IllegalArgumentException("JR não está no formato esperado! (JR offset ou JR label)");
                 }
 
-                binary_opcode.add( ( byte ) 0x18 );
-                binary_opcode.add( ( byte ) offset );
+                String operand = tokens[1].trim();
+                int offset;
+
+                if (symbolTable.containsKey(operand)) {
+                    int target = symbolTable.get(operand);
+
+                    // PC após ler uma instrução JR fica 2 bytes à frente
+                    offset = target - (currentPc + 2);
+
+                } else if (isNumber(operand)) {
+                    offset = Integer.parseInt(operand);
+                } else {
+                    throw new IllegalArgumentException("Label não encontrada: " + operand);
+                }
+
+                if (offset < -128 || offset > 127) {
+                    throw new IllegalArgumentException("Offset do JR fora do intervalo (-128 a 127).");
+                }
+
+                binary_opcode.add((byte) 0x18);
+                binary_opcode.add((byte) offset);
                 break;
             }
 
@@ -232,7 +255,17 @@ public class Translator {
                     throw new IllegalArgumentException("PUSH não está no formato esperado! (PUSH qq)");
                 }
 
-                //Não soube aplicar a lógica de par de registradores
+                String pair = temp[0].trim();
+
+                if(!registerPairTable.containsKey(pair)){
+                    throw new IllegalArgumentException("Par de registradores inválido: " + pair);
+                }
+
+                int qq = registerPairTable.get(pair);
+
+                opcode = 0xC5 + (qq << 4);
+
+                binary_opcode.add((byte) opcode);
                 break;
             }
             case "POP": {
@@ -240,7 +273,18 @@ public class Translator {
                 if ( temp.length != 1 ) {
                     throw new IllegalArgumentException("POP não está no formato esperado! (POP qq)");
                 }
-                //Não soube aplicar a lógica de par de registradores
+
+                String pair = temp[0].trim();
+
+                if(!registerPairTable.containsKey(pair)){
+                    throw new IllegalArgumentException("Par de registradores inválido: " + pair);
+                }
+
+                int qq = registerPairTable.get(pair);
+
+                opcode = 0xC1 + (qq << 4);
+
+                binary_opcode.add((byte) opcode);
                 break;
             }
             case "NOP": {
