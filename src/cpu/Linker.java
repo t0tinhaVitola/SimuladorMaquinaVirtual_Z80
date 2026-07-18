@@ -132,6 +132,5 @@ public class Linker {
         if(program.globalSymbolTable.containsKey("MAIN")){
             z80.PC = program.globalSymbolTable.get("MAIN");
         }else z80.PC = loadAddress;
-        
     }
 }

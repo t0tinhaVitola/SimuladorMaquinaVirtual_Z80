@@ -192,22 +192,25 @@ public class Translator {
 
 
 
-                if ( temp.length != 1 ) {
+                if(temp.length != 1){
                     throw new IllegalArgumentException("JP não está no formato esperado! (JP rr)");
                 }
 
                 binary_opcode.add( ( byte ) 0xC3 );
+                relocOffset = binary_opcode.size(); 
 
-                if(symbolTable.containsKey(labelOrAddress)){
-                    targetAddress = symbolTable.get(labelOrAddress);
-                } else if(isNumber(labelOrAddress)){
+                if ( isNumber(labelOrAddress) ) {
                     targetAddress = Integer.parseInt(labelOrAddress);
-                }else{
-                    throw new IllegalArgumentException("Label nao encontrada: " + labelOrAddress);
+                } else {
+                    labelRef = labelOrAddress;
+                    if ( symbolTable.containsKey(labelOrAddress) ) {
+                        targetAddress = symbolTable.get(labelOrAddress);
+                    } else {
+                        targetAddress = 0;
+                    }
                 }
                 binary_opcode.add((byte) (targetAddress & 0xFF)); //low byte
                 binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF)); //high byte
-                
                 break;
             }
             case "JR": {
