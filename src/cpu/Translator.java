@@ -189,7 +189,6 @@ public class Translator {
                 binary_opcode.add((byte) (targetAddress & 0xFF)); //low byte
                 binary_opcode.add((byte) ((targetAddress >> 8) & 0xFF)); //high byte
                 
-                //Aqui só está salvando o byte do opcode, não soube como lidar com o endereço para onde irá saltar.
                 break;
             }
             case "JR": {
